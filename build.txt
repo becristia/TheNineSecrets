@@ -1,0 +1,3 @@
+displayName = The Nine Secrets
+author = man
+version = 0.1
