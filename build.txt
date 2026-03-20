@@ -1,3 +1,5 @@
 displayName = The Nine Secrets
 author = man
 version = 0.1
+homepage = https://github.com/man/TheNineSecrets
+description = 基于小说《遮天》九秘的模组，包含9个独特饰品。

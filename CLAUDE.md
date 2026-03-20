@@ -1,46 +1,88 @@
 # CLAUDE.md
 
-本文件为 Claude Code (claude.ai/code) 在此代码库中工作时提供指导。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 项目概述
 
-这是一个名为"The Nine Secrets"的 Terraria tModLoader 模组，使用标准的 tModLoader 模组框架。
+基于小说《遮天》九秘的 Terraria tModLoader 模组。包含9个基础护符、合成护符、高级护符和终极护符。
 
-## 构建与开发命令
+## 构建命令
 
-### 构建模组
-- 通过 IDE（Visual Studio/Rider）使用 .csproj 文件进行构建
-- 项目从父级 tModLoader 安装目录导入 `..\tModLoader.targets`
-- 构建输出位于 `bin/Debug/` 目录（调试版本）
+```bash
+# 构建模组
+dotnet build
 
-### 运行/测试
-`Properties/launchSettings.json` 中配置了两个启动配置文件：
-- **Terraria**: 启动 tModLoader 客户端进行测试
-- **TerrariaServer**: 启动 tModLoader 服务器进行测试
+# 注意：构建前必须关闭 tModLoader，否则会报 TML003 错误
+```
 
-## 架构
+构建输出：`bin/Debug/net8.0/TheNineSecrets.dll`
 
-### 模组入口点
-`TheNineSecrets.cs` 包含主类 `TheNineSecrets`，继承自 `Terraria.ModLoader.Mod`。这是模组功能的中央枢纽。
+## 核心架构
 
-### 内容组织
-tModLoader 使用基于约定 的内容发现机制。在以下子目录中添加内容：
-- `Items/` - ModItem 类，用于自定义物品
-- `NPCs/` - ModNPC 类，用于自定义 NPC
-- `Projectiles/` - ModProjectile 类，用于自定义弹幕
-- `Tiles/` - ModTile 类，用于自定义物块
-- `Buffs/` - ModBuff 类，用于自定义增益/减益
-- `Systems/` - ModSystem 类，用于世界/玩家钩子
-- `Players/` - ModPlayer 类，用于玩家修改
+### 护符继承体系
+
+所有护符继承自 `BaseSecretAccessory` 基类：
+
+```
+BaseSecretAccessory (abstract)
+├── Tier 1: 9个基础护符 (Items/Accessories/BaseSecrets/)
+├── Tier 2: 5个合成护符 (Items/Accessories/Combined/)
+├── Tier 3: 3个高级护符 (Items/Accessories/Tier3/)
+└── Tier 4: 1个终极护符 (Items/Accessories/Ultimate/)
+```
+
+基类关键特性：
+- `Tier` 属性决定稀有度和价值
+- `CanEquipAccessory()` 实现互斥装备系统（同时只能装备一个护符）
+- `ApplySecretEffects()` 虚方法由子类实现具体效果
+
+### 玩家状态管理
+
+`Players/SecretPlayer.cs` 集中管理所有护符效果状态：
+- 使用布尔标志跟踪已装备护符（如 `hasZhenSecret`, `hasXingSecret`）
+- 处理子弹时间、濒死保护、闪避等主动能力
+- 在 `ResetEffects()` 中重置状态
+
+### Boss掉落配置
+
+`NPCs/GlobalSecretDrop.cs` 使用 `GlobalNPC` 处理Boss掉落：
+- 使用 `ItemDropRule.Common()` 定义掉落规则
+- 掉落率为 `1` 表示100%必掉
 
 ### 本地化
-本地化使用 HJSON 格式，文件位于 `Localization/en-US_Mods.TheNineSecrets.hjson`。
 
-### 构建元数据
-`build.txt` 包含模组元数据：
-- displayName: The Nine Secrets
-- author: man
-- version: 0.1
+本地化文件位于 `Localization/`：
+- `en-US_Mods.TheNineSecrets.hjson` - 英文
+- `zh-Hans_Mods.TheNineSecrets.hjson` - 简体中文
 
-## 参考
-- [tModLoader 基础模组制作指南](https://github.com/tModLoader/tModLoader/wiki/Basic-tModLoader-Modding-Guide)
+## 添加新护符
+
+1. 在对应目录创建继承 `BaseSecretAccessory` 的类
+2. 重写 `SecretName`, `SecretDescription`, `Tier`, `ApplySecretEffects()`
+3. 如需配方，重写 `AddRecipes()`
+4. 在 `SecretPlayer.cs` 添加对应状态标志
+5. 更新本地化文件
+
+## 文件结构要点
+
+```
+Items/
+├── Accessories/
+│   ├── BaseSecrets/      # Tier 1 基础护符
+│   ├── Combined/         # Tier 2 合成护符
+│   ├── Tier3/            # Tier 3 高级护符
+│   └── Ultimate/         # Tier 4 终极护符
+└── Crafting/             # 合成材料
+Players/                  # ModPlayer 状态管理
+NPCs/                     # GlobalNPC Boss掉落
+Projectiles/              # ModProjectile 弹幕
+Tiles/                    # ModTile 物块
+Buffs/                    # ModBuff 增益/减益
+Systems/                  # ModSystem 系统集成
+```
+
+## 注意事项
+
+- 修改 `icon.png` 必须保持 80x80 像素
+- 护符数值应保持平衡，参考现有数值量级
+- 合成护符需要在 `SecretForgeTile` 处制作
